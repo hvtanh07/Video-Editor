@@ -1,0 +1,39 @@
+{
+  "name": "video-editor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "server": "node server/index.js",
+    "start": "node server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hvtanh07/Video-Editor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hvtanh07/Video-Editor/issues"
+  },
+  "homepage": "https://github.com/hvtanh07/Video-Editor#readme",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "@vitejs/plugin-react": "^6.1.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "fluent-ffmpeg": "^2.1.3",
+    "lucide-react": "^1.48.0",
+    "multer": "^2.4.0",
+    "open": "^11.0.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "uuid": "^14.0.2",
+    "vite": "^8.3.1"
+  }
+}
