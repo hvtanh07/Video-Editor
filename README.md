@@ -48,13 +48,28 @@ Simply double click `run.bat`. It will automatically check dependencies, build t
 # 1. Install dependencies (if not already installed)
 npm install
 
-# 2. Build the frontend
+# 2. Build the frontend into docs/
 npm run build
 
 # 3. Start the server
 npm start
 ```
-Open **http://localhost:5000** in your browser (Chrome, Edge, Firefox, Brave, Safari).
+Open **http://localhost:5000** in your browser.
+
+### Hosting on GitHub Pages (Static Hosting from `main` + `/docs`)
+The project is pre-configured to build directly into the `docs/` folder with relative paths and client-side fallback rendering so you can host it for free on GitHub Pages:
+
+1. Push your repository to GitHub (`main` branch).
+2. On GitHub, navigate to your repository: **Settings** → **Pages** (in the left sidebar).
+3. Under **Build and deployment** → **Branch**:
+   - Select branch: **`main`**
+   - Select folder: **`/docs`**
+4. Click **Save**.
+5. Your web video editor will be live at:
+   **`https://hvtanh07.github.io/Video-Editor/`**
+
+> [!NOTE]
+> On GitHub Pages, the editor runs entirely in the browser using HTML5 Canvas, Web Audio API, and MediaRecorder for cutting, cropping, speed adjustments, and export. When run locally (`npm start` or `run.bat`), it also leverages the native high-speed FFmpeg engine!
 
 ### Development Mode (with Hot Reload)
 ```bash
