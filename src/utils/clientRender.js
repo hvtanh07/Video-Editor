@@ -1,6 +1,9 @@
+import { makeMp4Seekable } from './mp4Fixer';
+import fixWebmDuration from 'fix-webm-duration';
+
 /**
  * Client-side video export for GitHub Pages static hosting
- * Uses HTML5 Canvas, Web Audio API, and MediaRecorder
+ * Uses HTML5 Canvas, Web Audio API, MediaRecorder, and container seekability patchers
  */
 export async function renderVideoClientSide({
   videoUrl,
@@ -114,9 +117,31 @@ export async function renderVideoClientSide({
         }
       };
 
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mimeType });
-        const outputUrl = URL.createObjectURL(blob);
+      recorder.onstop = async () => {
+        const rawBlob = new Blob(chunks, { type: mimeType });
+        const outputDuration = clipDuration / (speed || 1.0);
+        let finalBlob = rawBlob;
+
+        try {
+          if (extension === 'mp4' || mimeType.includes('mp4')) {
+            finalBlob = await makeMp4Seekable(rawBlob, outputDuration);
+          } else if (extension === 'webm' || mimeType.includes('webm')) {
+            finalBlob = await new Promise((resFix) => {
+              try {
+                fixWebmDuration(rawBlob, Math.round(outputDuration * 1000), (fixed) => {
+                  resFix(fixed);
+                });
+              } catch (_) {
+                resFix(rawBlob);
+              }
+            });
+          }
+        } catch (patchErr) {
+          console.warn('Metadata patch error (using raw blob):', patchErr);
+          finalBlob = rawBlob;
+        }
+
+        const outputUrl = URL.createObjectURL(finalBlob);
         const outputFilename = `export_${Date.now()}.${extension}`;
 
         if (audioCtx) {
@@ -128,10 +153,10 @@ export async function renderVideoClientSide({
           downloadUrl: outputUrl,
           outputFilename,
           metadata: {
-            duration: clipDuration / speed,
+            duration: outputDuration,
             width: outW,
             height: outH,
-            size: blob.size,
+            size: finalBlob.size,
             format: extension.toUpperCase()
           },
           originalMetadata: {

@@ -319,12 +319,36 @@ export default function App() {
     setExportProgress(0);
     setExportStatus('Starting video export...');
 
-    // 1. If backend server is available and video is on server, try native FFmpeg first
-    if (video.type !== 'local') {
+    // 1. If backend server is available, use native FFmpeg for highest quality and speed
+    let serverFilename = video.filename;
+    let serverType = video.type;
+
+    if (serverType === 'local' && video.file) {
+      try {
+        setExportStatus('Connecting to local FFmpeg engine...');
+        const formData = new FormData();
+        formData.append('video', video.file);
+        const upRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          if (upData.success) {
+            serverFilename = upData.fileId;
+            serverType = 'upload';
+          }
+        }
+      } catch (_) {
+        // Server not available (e.g. static GitHub Pages), will use client-side renderer
+      }
+    }
+
+    if (serverType !== 'local') {
       try {
         const payload = {
-          sourceType: video.type,
-          filename: video.filename,
+          sourceType: serverType,
+          filename: serverFilename,
           startTime,
           endTime,
           crop: crop || null,

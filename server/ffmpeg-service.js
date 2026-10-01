@@ -137,15 +137,19 @@ function processVideo({
         videoFilters.push(`crop=${w}:${h}:${x}:${y}`);
       }
 
-      // 2. Speed filter on video
+      // 2. Speed filter and PTS reset on video (ensures timestamp starts cleanly at 0 for player seekability)
       if (Math.abs(speed - 1.0) > 0.001) {
         const ptsFactor = (1.0 / speed).toFixed(6);
-        videoFilters.push(`setpts=${ptsFactor}*PTS`);
+        videoFilters.push(`setpts=(PTS-STARTPTS)*${ptsFactor}`);
+      } else {
+        videoFilters.push('setpts=PTS-STARTPTS');
       }
 
       // Build audio filters
       const audioFilters = [];
       if (meta.hasAudio) {
+        audioFilters.push('asetpts=PTS-STARTPTS');
+
         // Speed filter on audio
         if (Math.abs(speed - 1.0) > 0.001) {
           const atempos = buildAtempoFilters(speed);
@@ -177,17 +181,22 @@ function processVideo({
         if (audioFilters.length > 0) {
           args.push('-af', audioFilters.join(','));
         }
-        args.push('-c:a', 'aac', '-b:a', '192k');
+        args.push('-c:a', 'aac', '-b:a', '192k', '-ar', '44100');
       } else {
         args.push('-an');
       }
 
-      // Output video codec & container optimizations
+      // Output video codec & container optimizations for universal player compatibility (Windows Media Player, QuickTime, iOS, Android, web)
       args.push(
+        '-r', '30',
         '-c:v', 'libx264',
+        '-profile:v', 'high',
+        '-level', '4.0',
         '-preset', 'fast',
         '-crf', '20',
         '-pix_fmt', 'yuv420p',
+        '-video_track_timescale', '30000',
+        '-avoid_negative_ts', 'make_zero',
         '-movflags', '+faststart',
         outputPath
       );
