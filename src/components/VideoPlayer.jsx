@@ -31,6 +31,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     onApplyCrop,
     onCancelCrop,
     onChangePendingCrop,
+    cropLockedRatio = null,
     speed = 1.0,
     volume = 100,
     currentTime = 0,
@@ -314,6 +315,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
               onChangeCrop={onChangePendingCrop}
               onApplyCrop={onApplyCrop}
               onCancelCrop={onCancelCrop}
+              lockedRatio={cropLockedRatio}
             />
           )}
 

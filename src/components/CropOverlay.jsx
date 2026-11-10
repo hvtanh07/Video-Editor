@@ -1,15 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Check, X, Crosshair, RotateCcw, Lock, Unlock } from 'lucide-react';
 
-const ASPECT_PRESETS = [
-  { label: 'Freeform', ratio: null },
-  { label: '16:9', ratio: 16 / 9 },
-  { label: '9:16', ratio: 9 / 16 },
-  { label: '1:1', ratio: 1 },
-  { label: '4:5', ratio: 4 / 5 },
-  { label: '4:3', ratio: 4 / 3 },
-  { label: '21:9', ratio: 21 / 9 }
-];
 
 export default function CropOverlay({
   containerRef,
@@ -19,14 +9,13 @@ export default function CropOverlay({
   crop, // { x, y, width, height }
   onChangeCrop,
   onApplyCrop,
-  onCancelCrop
+  onCancelCrop,
+  lockedRatio = null // number (w/h) when the aspect ratio is locked, else null
 }) {
   const [videoDisplayRect, setVideoDisplayRect] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [activeHandle, setActiveHandle] = useState(null);
   const [dragStart, setDragStart] = useState(null);
-  const [selectedPreset, setSelectedPreset] = useState('Freeform');
-  const [isRatioLocked, setIsRatioLocked] = useState(false);
 
   // Compute displayed video rect within container
   const updateDisplayRect = useCallback(() => {
@@ -87,65 +76,6 @@ export default function CropOverlay({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onApplyCrop, onCancelCrop]);
 
-  // Apply preset ratio
-  const applyPreset = (preset) => {
-    setSelectedPreset(preset.label);
-    if (!videoWidth || !videoHeight) return;
-
-    if (!preset.ratio) {
-      setIsRatioLocked(false);
-      return; // Freeform
-    }
-
-    setIsRatioLocked(true);
-    const targetRatio = preset.ratio;
-    let newW = videoWidth;
-    let newH = Math.round(newW / targetRatio);
-
-    if (newH > videoHeight) {
-      newH = videoHeight;
-      newW = Math.round(newH * targetRatio);
-    }
-
-    // Keep even numbers for H.264
-    newW = Math.floor(newW / 2) * 2;
-    newH = Math.floor(newH / 2) * 2;
-
-    const newX = Math.floor((videoWidth - newW) / 2);
-    const newY = Math.floor((videoHeight - newH) / 2);
-
-    onChangeCrop({
-      x: Math.max(0, newX),
-      y: Math.max(0, newY),
-      width: newW,
-      height: newH
-    });
-  };
-
-  // Center crop box
-  const centerCrop = () => {
-    if (!videoWidth || !videoHeight || !crop) return;
-    const newX = Math.max(0, Math.floor((videoWidth - crop.width) / 2));
-    const newY = Math.max(0, Math.floor((videoHeight - crop.height) / 2));
-    onChangeCrop({
-      ...crop,
-      x: newX,
-      y: newY
-    });
-  };
-
-  // Reset to full video
-  const resetToFull = () => {
-    setSelectedPreset('Freeform');
-    setIsRatioLocked(false);
-    onChangeCrop({
-      x: 0,
-      y: 0,
-      width: Math.floor(videoWidth / 2) * 2,
-      height: Math.floor(videoHeight / 2) * 2
-    });
-  };
-
   // Mouse / Touch handlers for dragging and resizing
   const handlePointerDown = (e, handleType = null) => {
     e.stopPropagation();
@@ -174,7 +104,7 @@ export default function CropOverlay({
       let { x, y, width, height } = initialCrop;
       const minSize = 24;
 
-      const activeRatio = ASPECT_PRESETS.find((p) => p.label === selectedPreset)?.ratio;
+      const activeRatio = lockedRatio;
 
       if (!activeHandle) {
         // Dragging the whole crop box anywhere inside the video boundaries
@@ -204,7 +134,7 @@ export default function CropOverlay({
         }
 
         // If ratio locked, scale height/width proportionally
-        if (isRatioLocked && activeRatio) {
+        if (activeRatio) {
           if (activeHandle === 'e' || activeHandle === 'w') {
             height = Math.min(videoHeight - y, width / activeRatio);
             width = height * activeRatio;
@@ -260,8 +190,7 @@ export default function CropOverlay({
     videoDisplayRect,
     videoWidth,
     videoHeight,
-    selectedPreset,
-    isRatioLocked,
+    lockedRatio,
     onChangeCrop
   ]);
 
@@ -275,71 +204,6 @@ export default function CropOverlay({
 
   return (
     <div className="crop-overlay-wrapper">
-      {/* Floating Crop Action Toolbar */}
-      <div className="crop-toolbar">
-        <div className="crop-presets">
-          <span className="crop-toolbar-label">Ratio:</span>
-          {ASPECT_PRESETS.map((preset) => (
-            <button
-              key={preset.label}
-              type="button"
-              className={`crop-preset-chip ${selectedPreset === preset.label ? 'active' : ''}`}
-              onClick={() => applyPreset(preset)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="crop-actions">
-          <button
-            type="button"
-            className={`crop-action-btn ${isRatioLocked ? 'active' : ''}`}
-            onClick={() => setIsRatioLocked(!isRatioLocked)}
-            title={isRatioLocked ? 'Aspect Ratio Locked' : 'Freeform Resizing'}
-          >
-            {isRatioLocked ? <Lock size={13} /> : <Unlock size={13} />}
-            <span>{isRatioLocked ? 'Locked' : 'Freeform'}</span>
-          </button>
-          <button
-            type="button"
-            className="crop-action-btn"
-            onClick={centerCrop}
-            title="Center crop box"
-          >
-            <Crosshair size={13} /> Center
-          </button>
-          <button
-            type="button"
-            className="crop-action-btn"
-            onClick={resetToFull}
-            title="Reset to full frame"
-          >
-            <RotateCcw size={13} /> Full
-          </button>
-
-          {/* Cancel Button */}
-          <button
-            type="button"
-            className="crop-cancel-btn"
-            onClick={onCancelCrop}
-            title="Cancel crop adjustment (Esc)"
-          >
-            <X size={14} /> Cancel
-          </button>
-
-          {/* Primary Apply Crop Button */}
-          <button
-            type="button"
-            className="crop-apply-btn"
-            onClick={onApplyCrop}
-            title="Apply Crop and use as new working video (Enter)"
-          >
-            <Check size={16} /> Apply Crop
-          </button>
-        </div>
-      </div>
-
       {/* Visual Overlay Pinning Exactly Over the Video */}
       <div
         className="crop-bounding-container"

@@ -23,6 +23,7 @@ export default function App() {
   // Interactive Crop Adjustment State
   const [isAdjustingCrop, setIsAdjustingCrop] = useState(false);
   const [pendingCrop, setPendingCrop] = useState(null);
+  const [cropLockedRatio, setCropLockedRatio] = useState(null); // w/h while a ratio preset is locked
 
   // Playback state
   const [currentTime, setCurrentTime] = useState(0);
@@ -284,6 +285,7 @@ export default function App() {
     setPendingCrop(
       crop ? { ...crop } : { x: 0, y: 0, width: srcW, height: srcH }
     );
+    setCropLockedRatio(null);
     setIsAdjustingCrop(true);
   };
 
@@ -490,6 +492,7 @@ export default function App() {
               onApplyCrop={handleApplyCrop}
               onCancelCrop={handleCancelCrop}
               onChangePendingCrop={(newPending) => setPendingCrop(newPending)}
+              cropLockedRatio={cropLockedRatio}
               speed={speed}
               volume={volume}
               currentTime={currentTime}
@@ -536,6 +539,8 @@ export default function App() {
               isCropped={Boolean(crop)}
               pendingCrop={pendingCrop}
               onChangeCrop={(newCrop) => setPendingCrop(newCrop)}
+              lockedRatio={cropLockedRatio}
+              onChangeLockedRatio={setCropLockedRatio}
               workingWidth={workingW}
               workingHeight={workingH}
               sourceWidth={sourceW}

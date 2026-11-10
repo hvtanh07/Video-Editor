@@ -7,7 +7,9 @@ import {
   Crosshair,
   ArrowLeft,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 const ASPECT_PRESETS = [
@@ -32,8 +34,13 @@ export default function CropControl({
   workingWidth = 1280,
   workingHeight = 720,
   sourceWidth = 1280,
-  sourceHeight = 720
+  sourceHeight = 720,
+  lockedRatio = null,
+  onChangeLockedRatio = () => {}
 }) {
+  // pendingCrop is expressed in full-source pixels, so crop math uses the source frame
+  const frameW = sourceWidth;
+  const frameH = sourceHeight;
   const currentW = pendingCrop ? pendingCrop.width : workingWidth;
   const currentH = pendingCrop ? pendingCrop.height : workingHeight;
   const currentX = pendingCrop ? pendingCrop.x : 0;
@@ -42,30 +49,33 @@ export default function CropControl({
 
   // Apply ratio preset
   const applyPreset = (preset) => {
-    if (!workingWidth || !workingHeight) return;
+    if (!frameW || !frameH) return;
 
     if (!isAdjustingCrop) {
       onStartCrop();
     }
 
     if (!preset.ratio) {
-      return; // Freeform
+      onChangeLockedRatio(null); // Freeform: resize freely
+      return;
     }
 
+    onChangeLockedRatio(preset.ratio);
+
     const targetRatio = preset.ratio;
-    let newW = workingWidth;
+    let newW = frameW;
     let newH = Math.round(newW / targetRatio);
 
-    if (newH > workingHeight) {
-      newH = workingHeight;
+    if (newH > frameH) {
+      newH = frameH;
       newW = Math.round(newH * targetRatio);
     }
 
     newW = Math.floor(newW / 2) * 2;
     newH = Math.floor(newH / 2) * 2;
 
-    const newX = Math.floor((workingWidth - newW) / 2);
-    const newY = Math.floor((workingHeight - newH) / 2);
+    const newX = Math.floor((frameW - newW) / 2);
+    const newY = Math.floor((frameH - newH) / 2);
 
     onChangeCrop({
       x: Math.max(0, newX),
@@ -77,10 +87,25 @@ export default function CropControl({
 
   // Center crop box
   const centerCrop = () => {
-    if (!workingWidth || !workingHeight || !pendingCrop) return;
-    const newX = Math.max(0, Math.floor((workingWidth - pendingCrop.width) / 2));
-    const newY = Math.max(0, Math.floor((workingHeight - pendingCrop.height) / 2));
+    if (!frameW || !frameH || !pendingCrop) return;
+    const newX = Math.max(0, Math.floor((frameW - pendingCrop.width) / 2));
+    const newY = Math.max(0, Math.floor((frameH - pendingCrop.height) / 2));
     onChangeCrop({ ...pendingCrop, x: newX, y: newY });
+  };
+
+  const resetToFull = () => {
+    onChangeLockedRatio(null);
+    onChangeCrop({
+      x: 0,
+      y: 0,
+      width: Math.floor(frameW / 2) * 2,
+      height: Math.floor(frameH / 2) * 2
+    });
+  };
+
+  const toggleRatioLock = () => {
+    if (lockedRatio) onChangeLockedRatio(null);
+    else if (currentW && currentH) onChangeLockedRatio(currentW / currentH);
   };
 
   const alignLeft = () => {
@@ -88,20 +113,20 @@ export default function CropControl({
     onChangeCrop({ ...pendingCrop, x: 0 });
   };
   const alignRight = () => {
-    if (!pendingCrop || !workingWidth) return;
-    onChangeCrop({ ...pendingCrop, x: Math.max(0, workingWidth - pendingCrop.width) });
+    if (!pendingCrop || !frameW) return;
+    onChangeCrop({ ...pendingCrop, x: Math.max(0, frameW - pendingCrop.width) });
   };
 
   const stepWidth = (delta) => {
     if (!pendingCrop) return;
-    let newW = Math.max(40, Math.min(workingWidth - pendingCrop.x, pendingCrop.width + delta));
+    let newW = Math.max(40, Math.min(frameW - pendingCrop.x, pendingCrop.width + delta));
     newW = Math.floor(newW / 2) * 2;
     onChangeCrop({ ...pendingCrop, width: newW });
   };
 
   const stepHeight = (delta) => {
     if (!pendingCrop) return;
-    let newH = Math.max(40, Math.min(workingHeight - pendingCrop.y, pendingCrop.height + delta));
+    let newH = Math.max(40, Math.min(frameH - pendingCrop.y, pendingCrop.height + delta));
     newH = Math.floor(newH / 2) * 2;
     onChangeCrop({ ...pendingCrop, height: newH });
   };
@@ -109,7 +134,7 @@ export default function CropControl({
   const handleWidthInput = (val) => {
     const parsed = parseInt(val, 10);
     if (!isNaN(parsed) && parsed >= 20) {
-      let w = Math.min(workingWidth - currentX, parsed);
+      let w = Math.min(frameW - currentX, parsed);
       w = Math.floor(w / 2) * 2;
       onChangeCrop({ ...pendingCrop, width: w });
     }
@@ -118,15 +143,11 @@ export default function CropControl({
   const handleHeightInput = (val) => {
     const parsed = parseInt(val, 10);
     if (!isNaN(parsed) && parsed >= 20) {
-      let h = Math.min(workingHeight - currentY, parsed);
+      let h = Math.min(frameH - currentY, parsed);
       h = Math.floor(h / 2) * 2;
       onChangeCrop({ ...pendingCrop, height: h });
     }
   };
-
-  const activePreset = ASPECT_PRESETS.find(
-    (p) => p.ratio && Math.abs(currentW / currentH - p.ratio) < 0.04
-  );
 
   return (
     <div className={`control-card crop-control-card ${isAdjustingCrop ? 'adjusting-active' : ''}`}>
@@ -189,8 +210,8 @@ export default function CropControl({
             <div className="preset-chip-group">
               {ASPECT_PRESETS.map((p) => {
                 const isSelected = p.ratio
-                  ? Math.abs(currentW / currentH - p.ratio) < 0.04
-                  : !activePreset;
+                  ? Boolean(lockedRatio) && Math.abs(lockedRatio - p.ratio) < 0.001
+                  : !lockedRatio;
                 return (
                   <button
                     key={p.label}
@@ -223,7 +244,7 @@ export default function CropControl({
                 <input
                   type="number"
                   min="40"
-                  max={workingWidth}
+                  max={sourceWidth}
                   step="2"
                   value={currentW}
                   onChange={(e) => handleWidthInput(e.target.value)}
@@ -238,7 +259,7 @@ export default function CropControl({
                 <input
                   type="number"
                   min="40"
-                  max={workingHeight}
+                  max={sourceHeight}
                   step="2"
                   value={currentH}
                   onChange={(e) => handleHeightInput(e.target.value)}
@@ -250,6 +271,22 @@ export default function CropControl({
             </div>
 
             <div className="crop-quick-actions">
+              <button
+                type="button"
+                className={`crop-util-btn ${lockedRatio ? 'active' : ''}`}
+                onClick={toggleRatioLock}
+                title={lockedRatio ? 'Aspect ratio locked: click to resize freely' : 'Lock the current aspect ratio'}
+              >
+                {lockedRatio ? <Lock size={13} /> : <Unlock size={13} />} {lockedRatio ? 'Locked' : 'Lock'}
+              </button>
+              <button
+                type="button"
+                className="crop-util-btn"
+                onClick={resetToFull}
+                title="Reset crop box to the full frame"
+              >
+                <RotateCcw size={13} /> Full
+              </button>
               <button
                 type="button"
                 className="crop-util-btn"

@@ -2437,16 +2437,6 @@ body {
   .studio-sidebar .crop-adjust-header-actions { flex-shrink: 0; }
   .studio-sidebar .crop-adjust-header-actions button { white-space: nowrap; }
 
-  /* On-video crop toolbar: never wider than the frame */
-  .crop-toolbar {
-    top: 6px;
-    max-width: calc(100% - 12px);
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px 10px;
-    padding: 4px 8px;
-  }
-  .crop-presets, .crop-actions { flex-wrap: wrap; justify-content: center; }
 }
 @media (min-width: 901px) {
   .studio-sidebar .crop-control-card .control-header { gap: 6px; }
