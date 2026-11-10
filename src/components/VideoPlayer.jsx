@@ -280,7 +280,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
           ref={containerRef}
           className="video-canvas-frame"
           style={{
-            aspectRatio: canvasAspectRatio
+            aspectRatio: canvasAspectRatio,
+            '--frame-ar': isAdjustingCrop ? sourceW / sourceH : workingW / workingH
           }}
         >
           <video

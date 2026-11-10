@@ -475,6 +475,7 @@ export default function App() {
           />
         ) : (
           <div className="studio-workspace">
+            <div className="studio-main-column">
             {/* Top Row: Video Player with Committed Cropped View */}
             <VideoPlayer
               ref={playerRef}
@@ -522,6 +523,9 @@ export default function App() {
               onPlaySegment={handlePlaySegment}
             />
 
+            </div>
+
+            <aside className="studio-sidebar">
             {/* Dedicated Crop Video Panel */}
             <CropControl
               isAdjustingCrop={isAdjustingCrop}
@@ -567,6 +571,7 @@ export default function App() {
               volume={volume}
               videoMetadata={video.metadata}
             />
+            </aside>
           </div>
         )}
       </main>
